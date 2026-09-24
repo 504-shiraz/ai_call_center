@@ -233,10 +233,17 @@ async def entrypoint(ctx: JobContext):
     # -----------------------------------------
     # Start Session
     # -----------------------------------------
-    session_started_at = time.perf_counter()
+    agent = AppointmentAgent()
+    
+    print("\n" + "=" * 50)
+    print("[DEBUG] AGENT TOOLS")
+    for tool in agent.tools:
+        print(f"[DEBUG TOOL] {tool.id}")
+    print("=" * 50)
+    
     await session.start(
         room=ctx.room,
-        agent=AppointmentAgent(),
+        agent=agent,
         
         room_input_options=RoomInputOptions(
             audio_enabled=True,
