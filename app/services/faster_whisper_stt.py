@@ -311,7 +311,7 @@ class FasterWhisperSTT(STT):
             return "EMPTY TRANSCRIPT"
         
         # Whisper Confidence Transcription
-        if ( avg_logprob is not None and avg_logprob < -1.0):
+        if ( avg_logprob is not None and avg_logprob < -1.2):
             return (f"LOW_LOG_PROBABILITY ({avg_logprob:.3f})")
         
         # Whisper Believes this is Probably Silence 

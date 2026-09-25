@@ -1,13 +1,21 @@
 from datetime import date, time, datetime
 from typing import Optional
 
-from sqlalchemy import String, Date, Time, DateTime
+from sqlalchemy import String, Date, Time, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.connection import Base
 
 class Appointment(Base):
     __tablename__ = "appointments"
+    __table_args__ = (
+        UniqueConstraint(
+            "appointment_date",
+            "appointment_time",
+            "status",
+            name="uq_confirmed_appointment_slot",
+        ),
+    )
     
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -21,6 +29,11 @@ class Appointment(Base):
     
     customer_phone: Mapped[Optional[str]] = mapped_column(
         String(30),
+        nullable=False,
+    )
+
+    customer_email: Mapped[Optional[str]] = mapped_column(
+        String(254),
         nullable=True,
     )
     

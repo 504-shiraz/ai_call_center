@@ -1,20 +1,24 @@
 import os
 import sys
-import time
-
 import truststore
+import httpx
+
 truststore.inject_into_ssl()
 
 from dotenv import load_dotenv
 
 from livekit import agents
 from livekit.agents import (Agent, AgentServer, AgentSession, JobContext, RoomInputOptions, TurnHandlingOptions, cli)
+from livekit.agents.types import APIConnectOptions
+from livekit.agents.voice.agent_session import SessionConnectOptions
 from livekit.plugins import openai, silero
 # from livekit.agents.stt import StreamAdapter
 
 from app.services.faster_whisper_stt import FasterWhisperSTT
 from app.database.connection import init_db
 from app.agent.appointment_agent import AppointmentAgent
+from app.core.config import settings
+
 
 load_dotenv()
 
@@ -33,6 +37,7 @@ if sys.stderr:
         encoding="utf-8",
         errors="replace",
     )
+    
     
 # ---------------------------------------------------------
 # LiveKit Agent Server
@@ -87,49 +92,6 @@ def prewarm(proc):
     
 server.setup_fnc = prewarm
 
-# def create_llm():
-#     provider = os.getenv("LLM_PROVIDER", "gemini").lower()
-    
-#     print()
-#     print("=" * 60)
-#     print("[LLM] Creating LLM")
-#     print(f"[LLM] Provider: {provider}")
-#     print("=" * 60)
-    
-#     if provider == "gemini":
-#         api_key = os.getenv("GEMINI_API_KEY")
-#         model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-        
-#         if not api_key:
-#             raise RuntimeError("GEMINI_API_KEY is missing from .env" )
-
-#         print("[LLM] Provider : Gemini")
-#         print(f"[LLM] Model    : {model}")
-#         print("[LLM] Endpoint : Gemini OpenAI-compatible API")
-
-#         return openai.LLM(
-#             model=model,
-#             api_key=api_key.strip(),
-#             base_url=("https://generativelanguage.googleapis.com/v1beta/openai"),
-#         )
-        
-#     elif provider == "ollama":
-
-#         model = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-
-#         base_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434/v1")
-
-#         print("[LLM] Provider : Ollama")
-#         print(f"[LLM] Model    : {model}")
-#         print(f"[LLM] Endpoint : {base_url}")
-
-#         return openai.LLM.with_ollama(
-#             model=model,
-#             base_url=base_url,
-#         )
-#     else:
-#         raise RuntimeError(f"Unsupported LLM_PROVIDER: {provider}")
-
 # ---------------------------------------------------------
 # LiveKit RTC Session
 # ---------------------------------------------------------
@@ -167,6 +129,7 @@ async def entrypoint(ctx: JobContext):
     # -----------------------------------------------------
     
     session = AgentSession(
+        max_tool_steps=5,
         
         # Local STT
         stt=whisper_stt,
@@ -174,12 +137,10 @@ async def entrypoint(ctx: JobContext):
         # Local Silero VAD
         vad = vad,
         
-        # llm = create_llm(),
-        
-        # OLLAMA + Qwen
         llm=openai.LLM.with_ollama(
             model=os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b"),
             base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434/v1"),
+            temperature=0.1,
         ),
         
         tts=openai.TTS(
@@ -227,6 +188,12 @@ async def entrypoint(ctx: JobContext):
             preemptive_generation={
                 "enabled" : False,
             },
+        ),
+        conn_options=SessionConnectOptions(
+            llm_conn_options=APIConnectOptions(
+                max_retry=0,
+                timeout=settings.OLLAMA_TIMEOUT_SECONDS,
+            ),
         ),
     )
     

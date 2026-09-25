@@ -89,8 +89,17 @@ The default database is `data/appointments.db`, created automatically on startup
 | `LIVEKIT_API_SECRET` | unset | LiveKit API secret |
 | `KOKORO_MODEL` | `kokoro` | TTS model |
 | `KOKORO_VOICE` | `af_bella` | TTS voice |
+| `EMAIL_ENABLED` | `false` | Enable SMTP confirmation emails |
+| `SMTP_HOST` | unset | SMTP server hostname |
+| `SMTP_PORT` | `587` | SMTP server port |
+| `SMTP_USERNAME` | unset | SMTP login username |
+| `SMTP_PASSWORD` | unset | SMTP login password |
+| `SMTP_FROM_EMAIL` | unset | Sender email address |
+| `SMTP_USE_TLS` | `true` | Use STARTTLS for SMTP |
 
 Keep API keys and secrets only in `.env` or your deployment secret store.
+
+To send confirmation emails, set `EMAIL_ENABLED=true` and configure the SMTP variables. The appointment is saved even if the provider is unavailable; the agent reports that the booking succeeded but email delivery failed.
 
 ## Run the terminal assistant
 
