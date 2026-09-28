@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -81,11 +82,60 @@ class AppointmentAgent(Agent):
         print("=" * 60)
 
     def _tool_error(self, operation: str, error: Exception) -> dict:
-        logger.exception("%s Failed", operation)
+        if isinstance(error, ValueError):
+            logger.warning("%s rejected: %s", operation, error)
+        else:
+            logger.exception("%s Failed", operation)
+        safe_message = str(error) if isinstance(error, ValueError) else (
+            "I could not complete that request. Please try again."
+        )
         return {
             "success": False,
-            "error": str(error),
+            "error": safe_message,
+            "message": safe_message,
         }
+
+    def _remember_contact_from_history(self, context: RunContext) -> None:
+        try:
+            messages = context.session.history.messages
+        except Exception:
+            return
+
+        for message in messages:
+            if getattr(message, "role", None) != "user":
+                continue
+            content = getattr(message, "content", "")
+            if isinstance(content, list):
+                content = " ".join(str(item) for item in content)
+            content = str(content)
+            email_match = re.search(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", content)
+            phone_match = re.search(r"(?:\+?92|0)\s*[\d\s()-]{9,}", content)
+            name_match = re.search(
+                r"(?im)^\s*([A-Za-z]+(?:\s+[A-Za-z]+){1,3})\s*$",
+                content,
+            )
+            self._remember_contact(
+                name_match.group(1) if name_match else "",
+                phone_match.group(0) if phone_match else "",
+                email_match.group(0) if email_match else "",
+            )
+
+    def _remember_contact(
+        self,
+        customer_name: str = "",
+        customer_phone: str = "",
+        customer_email: str = "",
+    ) -> None:
+        if customer_name.strip():
+            self.booking.customer_name = customer_name.strip()
+        if customer_phone.strip():
+            normalized_phone = self.appointment_service.normalize_phone(customer_phone)
+            if self.appointment_service.is_valid_phone(normalized_phone):
+                self.booking.customer_phone = normalized_phone
+        if customer_email.strip():
+            normalized_email = customer_email.strip().lower()
+            if self.appointment_service.is_valid_email(normalized_email):
+                self.booking.customer_email = normalized_email
 
     def _validate_booking_contact(
         self, customer_name: str, customer_phone: str, customer_email: str,
@@ -169,6 +219,9 @@ class AppointmentAgent(Agent):
         context: RunContext,
         appointment_date: str,
         appointment_time: str,
+        customer_name: str = "",
+        customer_phone: str = "",
+        customer_email: str = "",
     ) -> dict:
             
         """
@@ -191,6 +244,9 @@ class AppointmentAgent(Agent):
         print(f"[TOOL INPUT] time={appointment_time}")
         print("[TOOL STATUS] Executing...")
         print("=" * 60)
+
+        self._remember_contact_from_history(context)
+        self._remember_contact(customer_name, customer_phone, customer_email)
         
         try:
             result = await asyncio.to_thread(
@@ -247,11 +303,11 @@ class AppointmentAgent(Agent):
     async def book_appointment(
         self,
         context: RunContext,
-        customer_name: str,
         appointment_date: str,
         appointment_time: str,
-        customer_phone: str,
-        customer_email: str,
+        customer_name: str = "",
+        customer_phone: str = "",
+        customer_email: str = "",
         customer_confirmed: bool = False,
     ) -> dict:
             
@@ -276,6 +332,10 @@ class AppointmentAgent(Agent):
         print(f"[TOOL INPUT] time={appointment_time}")
         print(f"[TOOL INPUT] phone={customer_phone or '[not provided]'}")
         print("=" * 60)
+
+        customer_name = customer_name or self.booking.customer_name or ""
+        customer_phone = customer_phone or self.booking.customer_phone or ""
+        customer_email = customer_email or self.booking.customer_email or ""
         
         contact, error = self._validate_booking_contact(customer_name, customer_phone, customer_email)
         

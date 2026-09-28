@@ -20,12 +20,21 @@ class AppointmentService:
         self.repository = AppointmentRepository()
         
     def _parse_date(self, value:str) -> Date:
+        value = value.strip()
         try:
             return Date.fromisoformat(value)
         except ValueError:
-            raise ValueError(
-                "Invalid Appointment Date. Use YYYY-MM-DD."
-            )
+            for date_format in (
+                "%B %d, %Y",
+                "%b %d, %Y",
+                "%d %B %Y",
+                "%d %b %Y",
+            ):
+                try:
+                    return datetime.strptime(value, date_format).date()
+                except ValueError:
+                    continue
+        raise ValueError("Invalid Appointment Date. Use a clear date such as September 24, 2026.")
             
     def _parse_time(self, value:str) -> Time:
         try:
@@ -44,7 +53,7 @@ class AppointmentService:
         
         if appointment_date < today:
             raise ValueError(
-                "Appointment Date Cannot be in the Past."
+                "I cannot book past dates. I can only book future dates."
             )
             
         if not (

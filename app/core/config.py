@@ -15,7 +15,7 @@ class Settings:
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434/v1")
-    OLLAMA_TIMEOUT_SECONDS: float = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "60"))
+    OLLAMA_TIMEOUT_SECONDS: float = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
     OLLAMA_MAX_COMPLETION_TOKENS: int = int(os.getenv("OLLAMA_MAX_COMPLETION_TOKENS", "256"))
     
     LIVEKIT_URL:str = os.getenv("LIVEKIT_URL", "wss://ai-call-center-11vcgwxx.livekit.cloud")

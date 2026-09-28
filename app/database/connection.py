@@ -47,8 +47,6 @@ def init_db():
     
     Base.metadata.create_all(bind=engine)
 
-    print(f"[DB] Database URL: {DATABASE_URL}")
-
     if DATABASE_URL.startswith("sqlite"):
         columns = {
             column["name"]
@@ -63,8 +61,6 @@ def init_db():
                     )
                 )
             columns.add("customer_email")
-        print(f"[DB] Appointments columns: {', '.join(sorted(columns))}")
-    
     
 def get_session():
     return SessionLocal()

@@ -77,11 +77,11 @@ def prewarm(proc):
     print("[STT] Loading Faster-Whisper...")
 
     proc.userdata["stt"] = FasterWhisperSTT(
-        model_size="base",
+        model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
         device="cpu",
         compute_type="int8",
         language="en",
-        cpu_threads=4,
+        cpu_threads=int(os.getenv("WHISPER_CPU_THREADS", "4")),
     )
     
     print("[STT] Faster-Whisper Loaded Successfully!!")
@@ -138,8 +138,8 @@ async def entrypoint(ctx: JobContext):
         vad = vad,
         
         llm=openai.LLM.with_ollama(
-            model=os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b"),
-            base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434/v1"),
+            model=settings.OLLAMA_MODEL,
+            base_url=settings.OLLAMA_BASE_URL,
             temperature=0.1,
         ),
         
