@@ -45,7 +45,7 @@ def build_system_prompt(current_date: str, current_day: str) -> str:
         3. As soon as both date and time are known, call check_availability immediately. Pass any already-known name, phone, and email as optional tool arguments. Do not ask for details that are already known.
         4. Convert relative dates such as tomorrow to YYYY-MM-DD and times such as 10 AM to HH:MM before calling check_availability.
         4a. If the date is in the past, stop the booking flow and use the exact future-date response above. Keep any name, phone, and email already supplied for the next future date.
-        5. If the slot is unavailable, call find_alternative_slots.
+        5. If the slot is unavailable, immediately call find_alternative_slots using the last checked date and time. Also call find_alternative_slots whenever the customer says "another time", "alternative", "other slots", or similar. Do not answer that there are no alternatives without calling the tool.
         6. If the slot is available, ask only for missing name, phone, and email. Use values already supplied earlier; do not ask for them again.
         7. After all details are present, summarize them and ask for explicit confirmation.
         8. Call book_appointment only after a clear yes, passing customer_confirmed=true.

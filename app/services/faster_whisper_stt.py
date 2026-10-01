@@ -35,6 +35,9 @@ class FasterWhisperSTT(STT):
         compute_type: str = "int8",
         language: str = "en",
         cpu_threads: int = 4,
+        beam_size: int = 3,
+        best_of: int = 3,
+        vad_filter: bool = True,
     ) -> None:
         
         super().__init__(
@@ -49,6 +52,9 @@ class FasterWhisperSTT(STT):
 
         self._model_size = model_size
         self._language = language
+        self._beam_size = beam_size
+        self._best_of = best_of
+        self._vad_filter = vad_filter
         
         print()
         print("=" * 60)
@@ -251,8 +257,8 @@ class FasterWhisperSTT(STT):
             language=( language if language else self._language),
             task="transcribe",
             
-            best_of=3,
-            beam_size=3,
+            best_of=self._best_of,
+            beam_size=self._beam_size,
             
             temperature=0.0,
             condition_on_previous_text=False,
@@ -261,7 +267,7 @@ class FasterWhisperSTT(STT):
             log_prob_threshold=-1.0,
             no_speech_threshold=0.6,
             
-            vad_filter=False,
+            vad_filter=self._vad_filter,
             word_timestamps=False,
         )
         

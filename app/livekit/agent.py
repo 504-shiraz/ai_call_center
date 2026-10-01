@@ -130,6 +130,10 @@ async def entrypoint(ctx: JobContext):
     
     session = AgentSession(
         max_tool_steps=5,
+        allow_interruptions=True,
+        min_interruption_duration=0.25,
+        min_interruption_words=1,
+        resume_false_interruption=True,
         
         # Local STT
         stt=whisper_stt,
@@ -196,6 +200,13 @@ async def entrypoint(ctx: JobContext):
             ),
         ),
     )
+
+    @session.on("metrics_collected")
+    def on_metrics_collected(event) -> None:
+        metrics = event.metrics
+        fields = metrics.model_dump(exclude_none=True)
+        metric_type = fields.pop("type", type(metrics).__name__)
+        print(f"VOICE_METRIC type={metric_type} fields={fields}")
     
     # -----------------------------------------
     # Start Session

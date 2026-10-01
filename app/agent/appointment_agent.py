@@ -10,6 +10,7 @@ from livekit.agents import Agent, RunContext, function_tool
 from app.agent.prompt import build_system_prompt
 from app.services.email_service import ConfirmationEmailService
 from app.services.appointment_service import AppointmentService
+from app.utils.performance import PerformanceTracker
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,8 @@ class AppointmentAgent(Agent):
     """
     
     def __init__(self):
+        
+        self.performance = PerformanceTracker()
         
         pakistan_now = datetime.now(ZoneInfo("Asia/Karachi"))
         current_date = pakistan_now.strftime("%Y-%m-%d")
@@ -273,8 +276,10 @@ class AppointmentAgent(Agent):
                 
                 print( "[BOOKING STATE] Available Slot stored as Pending!!")
             else:
-                self.booking.appointment_date = None
-                self.booking.appointment_time = None
+                # Keep the requested slot so a follow-up such as "show me an
+                # alternative" can call find_alternative_slots without asking again.
+                self.booking.appointment_date = appointment_date
+                self.booking.appointment_time = appointment_time
                 self.booking.availability_checked = True
                 self.booking.slot_available = False
                 self.booking.confirmation_pending = False
@@ -409,11 +414,20 @@ class AppointmentAgent(Agent):
     async def find_alternative_slots(
         self,
         context: RunContext,
-        appointment_date: str,
-        appointment_time: str,
+        appointment_date: str = "",
+        appointment_time: str = "",
     ) -> dict:
         
-        """Find nearby Available 30-minute Appointment Slots."""
+        """Find nearby available 30-minute slots. Call this when a requested slot is unavailable or the customer asks for another/alternative time. If date or time is omitted, reuse the last slot checked in this conversation."""
+
+        appointment_date = appointment_date or self.booking.appointment_date or ""
+        appointment_time = appointment_time or self.booking.appointment_time or ""
+        if not appointment_date or not appointment_time:
+            return {
+                "success": False,
+                "slots": [],
+                "error": "Ask the customer which date and time they want alternatives for.",
+            }
         
         try:
             return await asyncio.to_thread(
